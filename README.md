@@ -100,9 +100,9 @@ The following keymap is defined in the buffer inherits the standard widget keyma
 -   `M-RET` bts:widget-submit &#x2026; push submit button
 -   `M-DEL` bts:widget-cancel &#x2026; push cancel button
 
-\*1 For checking that, see document of `widget-keymap` / `widget-field-keymap` / `widget-text-keymap`
-\*2 If possible, use ![pophint.el](https://github.com/aki2o/emacs-pophint)
-\*3 ![pophint.el](https://github.com/aki2o/emacs-pophint) is required
+\*1 For checking that, see document of `widget-keymap` / `widget-field-keymap` / `widget-text-keymap`  
+\*2 If possible, use ![pophint.el](https://github.com/aki2o/emacs-pophint)  
+\*3 ![pophint.el](https://github.com/aki2o/emacs-pophint) is required  
 
 ### List up tickets
 
@@ -124,10 +124,10 @@ The following keymap is defined in the buffer inherits `tabulated-list-mode-map`
 -   `g` / `r` bts:summary-reload-ticket &#x2026; fetch the latest data and update current entry
 -   `G` / `R` bts:summary-reload-all &#x2026; fetch the latest datas and update all entries (\*2)
 
-\*1 If any entries are marked, target are them (\*3). Else, it's current entry
-\*2 The buffer is not updated to latest automatically
-\*3 If target is multiple and the system has the function, open multi view (\*4)
-\*4 Multi view is able to edit multiple tickets at one time
+\*1 If any entries are marked, target are them (\*3). Else, it's current entry  
+\*2 The buffer is not updated to latest automatically  
+\*3 If target is multiple and the system has the function, open multi view (\*4)  
+\*4 Multi view is able to edit multiple tickets at one time  
 
 # Tested On
 
