@@ -1,5 +1,3 @@
-![Japanese](https://github.com/aki2o/emacs-bts/blob/master/README-ja.md)
-
 [![Build Status](https://travis-ci.org/aki2o/emacs-bts.svg?branch=master)](https://travis-ci.org/aki2o/emacs-bts)
 
 # What's this?
@@ -25,7 +23,7 @@ Here is a demo using ![bts-github.el](https://github.com/aki2o/emacs-bts-github)
 
 ### If use package.el
 
-2015/01/06 Now application
+2015/01/06 It's available by using melpa.
 
 ### If use el-get.el
 

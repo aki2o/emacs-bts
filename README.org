@@ -29,7 +29,7 @@
   
 *** If use package.el
 
-    2015/01/06 Now application
+    2015/01/06 It's available by using melpa.
     
 *** If use el-get.el
 
