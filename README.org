@@ -1,7 +1,5 @@
 #+OPTIONS: toc:nil
 
-[[https://github.com/aki2o/emacs-bts/blob/master/README-ja.md][Japanese]]
-
 [[travis-build:aki2o/emacs-bts#master]]
 
 * What's this?

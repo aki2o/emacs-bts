@@ -5,7 +5,7 @@
 ;; Author: Hiroaki Otsu <ootsuhiroaki@gmail.com>
 ;; Keywords: convenience
 ;; URL: https://github.com/aki2o/emacs-bts
-;; Version: 0.0.1
+;; Version: 0.0.2
 ;; Package-Requires: ((widget-mvc "0.0.2") (log4e "0.3.0") (yaxception "0.3.3") (dash "2.9.0") (s "1.9.0") (pos-tip "0.4.5"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -332,7 +332,6 @@
 
 
 ;;; Code:
-;; (eval-when-compile (require 'cl))
 (require 'cl-lib)
 (require 'plstore)
 (require 'wid-edit)
@@ -3098,8 +3097,9 @@ CONFLICTS is a alist. The format is ((NAME1 . (CHANGED1 . LATEST1)) (NAME2 . (CH
   (bts--debug* "start ticket chk any conflicts for %s"
                (ignore-errors (bts:ticket-get-unique-string tic)))
   (let ((latest-tic (bts:ticket-get-latest tic)))
-    (loop for (k latest-val) on latest-tic by 'cddr
-          for curr-val = (plist-get tic k)
+    (loop for (k v) on latest-tic by 'cddr
+          for curr-val = (or (plist-get tic k) "")
+          for latest-val = (or v "")
           if (not (equal curr-val latest-val))
           collect (let ((propsym (bts:conv-keyward-to-symbol k)))
                     (bts--info "found conflict : name[%s] local[%s] latest[%s]"
@@ -3357,7 +3357,7 @@ declare...%s"
      (bts:widget-build-buffer :buffer buf
                               :layout layout
                               :defaults defs
-                              :title "Update Tickets"
+                              :title "Update Tickets In A Lump"
                               :submit-title "Regist"
                               :submit-action submit
                               :attributes attrs))))
