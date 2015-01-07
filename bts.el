@@ -5,7 +5,7 @@
 ;; Author: Hiroaki Otsu <ootsuhiroaki@gmail.com>
 ;; Keywords: convenience
 ;; URL: https://github.com/aki2o/emacs-bts
-;; Version: 0.0.2
+;; Version: 0.0.3
 ;; Package-Requires: ((widget-mvc "0.0.2") (log4e "0.3.0") (yaxception "0.3.3") (dash "2.9.0") (s "1.9.0") (pos-tip "0.4.5"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -2151,10 +2151,12 @@ It should return a list of plist has the following properties as a declare of co
 
 How to find conflict of ticket in the registration flow.
 Conflict means other user or application has changed same property of the ticket while
-user gets ticket from the system and changes it.
-If nil, check only the properties, which user has changed, using `equal'.
-If any, check all properties using `equal'.
-For using their function, ticket-latest function is required.
+user gets ticket from the system and changes that.
+If this option is nil, only the properties which user has changed are checked using `equal'.
+If 'any, all properties are checked using `equal'.
+If the registration for the system handles only the updated properties, nil is better.
+Else, 'any should be specified.
+Also, ticket-latest function is required in their cases.
 Otherwise, it should be a function receives the arguments which are before ticket data,
 changed ticket data and returns a list of the conflict if conflict is found.
 The format should be ((NAME1 . (CHANGED1 . LATEST1)) (NAME2 . (CHANGED2 . LATEST2))...).
@@ -3067,12 +3069,15 @@ CONFLICTS is a alist. The format is ((NAME1 . (CHANGED1 . LATEST1)) (NAME2 . (CH
   (let ((prop-keys (-uniq (append (loop for (k v) on tic1 by 'cddr collect k)
                                   (loop for (k v) on tic2 by 'cddr collect k)))))
     (loop for p in prop-keys
-          for val1 = (or (plist-get tic1 p) "")
-          for val2 = (or (plist-get tic2 p) "")
+          for oval1 = (plist-get tic1 p)
+          for oval2 = (plist-get tic2 p)
+          ;; Consider nil equals a empty string
+          for val1 = (or oval1 "")
+          for val2 = (or oval2 "")
           if (not (equal val1 val2))
           collect (let ((propsym (bts:conv-keyward-to-symbol p)))
-                    (bts--debug "found diff : name[%s] old[%s] new[%s]" propsym val1 val2)
-                    (cons propsym (cons val1 val2))))))
+                    (bts--debug "found diff : name[%s] old[%s] new[%s]" propsym oval1 oval2)
+                    (cons propsym (cons oval1 oval2))))))
 
 (defun bts::ticket-chk-diff-conflicts (tic diffs)
   (bts--debug* "start ticket chk diff conflicts for %s"
@@ -3083,25 +3088,31 @@ CONFLICTS is a alist. The format is ((NAME1 . (CHANGED1 . LATEST1)) (NAME2 . (CH
           for latest-val = (cddr d)
           for curr-diff = (assq propsym diffs)
           for curr-val = (bts:awhen curr-diff (cddr it))
-          if (and curr-diff
-                  (not (equal curr-val latest-val)))
           ;; If same property has been updated at latest version in system
           ;; and the value is different between local and latest,
           ;; the property is conflicted.
+          if (and curr-diff
+                  (not (equal curr-val latest-val)))
           collect (progn
                     (bts--info "found conflict : name[%s] local[%s] latest[%s]"
                                propsym curr-val latest-val)
                     (cons propsym (cons curr-val latest-val))))))
 
-(defun bts::ticket-chk-any-conflicts (tic)
+(defun bts::ticket-chk-any-conflicts (tic diffs local-tic)
   (bts--debug* "start ticket chk any conflicts for %s"
                (ignore-errors (bts:ticket-get-unique-string tic)))
   (let ((latest-tic (bts:ticket-get-latest tic)))
-    (loop for (k v) on latest-tic by 'cddr
-          for curr-val = (or (plist-get tic k) "")
-          for latest-val = (or v "")
-          if (not (equal curr-val latest-val))
-          collect (let ((propsym (bts:conv-keyward-to-symbol k)))
+    (loop for d in (bts::ticket-diff tic latest-tic)
+          for propsym = (car d)
+          for latest-val = (cddr d)
+          for curr-diff = (assq propsym diffs)
+          for curr-val = (plist-get local-tic (bts:conv-symbol-to-keyword propsym))
+          ;; About the property has been updated at latest version in system,
+          ;; if the property has not been updated to same value at local,
+          ;; the property is conflicted.
+          if (or (not curr-diff)
+                 (not (equal curr-val latest-val)))
+          collect (progn
                     (bts--info "found conflict : name[%s] local[%s] latest[%s]"
                                propsym curr-val latest-val)
                     (cons propsym (cons curr-val latest-val))))))
@@ -3150,7 +3161,7 @@ project... %s"
                                ((not latest-fetcher)
                                 (bts--info "skip ticket check conflict : no ticket latest function in %s" sysnm))
                                ((eq conflict-checker 'any)
-                                (bts::ticket-chk-any-conflicts tic))
+                                (bts::ticket-chk-any-conflicts before-tic diffs tic))
                                (t
                                 (bts::ticket-chk-diff-conflicts before-tic diffs))))))
             ;; Try to resolve conflict
