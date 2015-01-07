@@ -5,7 +5,7 @@
 ;; Author: Hiroaki Otsu <ootsuhiroaki@gmail.com>
 ;; Keywords: convenience
 ;; URL: https://github.com/aki2o/emacs-bts
-;; Version: 0.0.3
+;; Version: 0.0.4
 ;; Package-Requires: ((widget-mvc "0.0.2") (log4e "0.3.0") (yaxception "0.3.3") (dash "2.9.0") (s "1.9.0") (pos-tip "0.4.5"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -4058,6 +4058,7 @@ TICKETS is a list of plist as fetched ticket from QUERY."
 \\<bts:summary-mode-map>
 \\{bts:summary-mode-map}"
   (set (make-local-variable 'bts::summary-query-idlist) nil)
+  (set (make-local-variable 'bts::summary-ticket-hash) (make-hash-table :test 'equal))
   (setq truncate-lines t)
   (setq tabulated-list-format bts::summary-format)
   (setq tabulated-list-padding 1)
