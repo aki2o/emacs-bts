@@ -5,11 +5,11 @@
 This is a extension of Emacs that provides a unified interface for various bug tracking systems.  
 This works using the plugin for target system.  
 At present, there are the following well-known plugins.  
--   ![bts-github.el](https://github.com/aki2o/emacs-bts-github)
+-   [bts-github.el](https://github.com/aki2o/emacs-bts-github)
 
 # Demo
 
-Here is a demo using ![bts-github.el](https://github.com/aki2o/emacs-bts-github).  
+Here is a demo using [bts-github.el](https://github.com/aki2o/emacs-bts-github).  
 
 ![demo](img/demo.gif)
 
@@ -43,11 +43,11 @@ Download bts.el and put it on your load-path.
 
 ### Dependency
 
--   ![widget-mvc.el](https://github.com/kiwanami/emacs-widget-mvc)
--   ![log4e.el](https://github.com/aki2o/log4e)
--   ![yaxception.el](https://github.com/aki2o/yaxception)
--   ![dash.el](https://github.com/magnars/dash.el)
--   ![s.el](https://github.com/magnars/s.el)
+-   [widget-mvc.el](https://github.com/kiwanami/emacs-widget-mvc)
+-   [log4e.el](https://github.com/aki2o/log4e)
+-   [yaxception.el](https://github.com/aki2o/yaxception)
+-   [dash.el](https://github.com/magnars/dash.el)
+-   [s.el](https://github.com/magnars/s.el)
 -   pos-tip.el
 
 # Configuration
@@ -98,9 +98,9 @@ The following keymap is defined in the buffer inherits the standard widget keyma
 -   `M-RET` bts:widget-submit &#x2026; push submit button
 -   `M-DEL` bts:widget-cancel &#x2026; push cancel button
 
-\*1 For checking that, see document of `widget-keymap` / `widget-field-keymap` / `widget-text-keymap`  
-\*2 If possible, use ![pophint.el](https://github.com/aki2o/emacs-pophint)  
-\*3 ![pophint.el](https://github.com/aki2o/emacs-pophint) is required  
+1. For checking that, see document of `widget-keymap` / `widget-field-keymap` / `widget-text-keymap`  
+2. If possible, use [pophint.el](https://github.com/aki2o/emacs-pophint)  
+3. [pophint.el](https://github.com/aki2o/emacs-pophint) is required  
 
 ### List up tickets
 
@@ -122,10 +122,10 @@ The following keymap is defined in the buffer inherits `tabulated-list-mode-map`
 -   `g` / `r` bts:summary-reload-ticket &#x2026; fetch the latest data and update current entry
 -   `G` / `R` bts:summary-reload-all &#x2026; fetch the latest datas and update all entries (\*2)
 
-\*1 If any entries are marked, target are them (\*3). Else, it's current entry  
-\*2 The buffer is not updated to latest automatically  
-\*3 If target is multiple and the system has the function, open multi view (\*4)  
-\*4 Multi view is able to edit multiple tickets at one time  
+1. If any entries are marked, target are them (\*3). Else, it's current entry  
+2. The buffer is not updated to latest automatically  
+3. If target is multiple and the system has the function, open multi view (\*4)  
+4. Multi view is able to edit multiple tickets at one time  
 
 # Tested On
 
