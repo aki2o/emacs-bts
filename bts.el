@@ -5,7 +5,7 @@
 ;; Author: Hiroaki Otsu <ootsuhiroaki@gmail.com>
 ;; Keywords: convenience
 ;; URL: https://github.com/aki2o/emacs-bts
-;; Version: 0.0.4
+;; Version: 0.1.0
 ;; Package-Requires: ((widget-mvc "0.0.2") (log4e "0.3.0") (yaxception "0.3.3") (dash "2.9.0") (s "1.9.0") (pos-tip "0.4.5"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -2000,6 +2000,7 @@ Case label
   ticket-multi-view
   ticket-fetcher
   ticket-register
+  ticket-eraser
   ticket-unique-string
   ticket-latest
   summary-format
@@ -2116,6 +2117,12 @@ It should return non-nil if the registration is succeed.
   the return value is used as the latest data.
   Else, argument ticket data is used as the latest data.
 
+* ticket-eraser (optional)
+
+It's a function for erasion of ticket.
+It receives the arguments which are a project configuration, a ticket data.
+It should raise error if the erasion is failed.
+
 * ticket-unique-string (required)
 
 It's a function for getting a unique string of ticket.
@@ -2193,7 +2200,7 @@ It should repair the ticket data and return t if the conflict has been resolved.
       it
     (bts--error "failed system get from sysnm[%s]" sysnm)
     (when (not no-error)
-      (yaxception:throw 'bts:invalid-argument))))
+      (error "System '%s' is not yet registed." sysnm))))
 
 
 ;;;;;;;;;;;;;
@@ -2405,6 +2412,7 @@ SYSNM is a string/symbol."
   (bts::project-load-config)
   (bts::plstore-remove bts::project-store (bts::project-get-store-key projnm sysnm)))
 
+;;;###autoload
 (defun bts:project-new (system)
   "Popup a widget buffer for creating a new project configuration for SYSTEM.
 
@@ -2420,6 +2428,7 @@ SYSTEM is a `bts:system' object."
                   (yaxception:get-text e) (yaxception:get-stack-trace-string e))
       (bts:show-message "Failed project new : %s" (yaxception:get-text e)))))
 
+;;;###autoload
 (defun bts:project-update (project)
   "Popup a widget buffer for updating PROJECT.
 
@@ -2440,6 +2449,7 @@ PROJECT is a plist as project configuration."
   t         "Remove project and the belonged queries configuration of '%s'?"
   'Japanese "プロジェクト'%s'とそれに属するクエリの設定を削除してよろしいですか？")
 
+;;;###autoload
 (defun bts:project-remove (project)
   "Remove PROJECT with confirm.
 
@@ -2466,6 +2476,7 @@ PROJECT is a plist as project configuration."
   t         "Remove all projects and queries configuration?"
   'Japanese "全てのプロジェクト及びクエリの設定を削除してよろしいですか？")
 
+;;;###autoload
 (defun bts:project-remove-all ()
   "Remove all project configurations with confirm."
   (interactive)
@@ -2743,6 +2754,7 @@ delete all query configuration in `bts:query-cache-file'."
           for key = (car found)
           do (bts::plstore-remove bts::query-store key))))
 
+;;;###autoload
 (defun bts:query-new (project)
   "Popup a widget buffer for creating a new query configuration belongs to PROJECT.
 
@@ -2758,6 +2770,7 @@ PROJECT is a plist as project configuration."
                   (yaxception:get-text e) (yaxception:get-stack-trace-string e))
       (bts:show-message "Failed query new : %s" (yaxception:get-text e)))))
 
+;;;###autoload
 (defun bts:query-update (query)
   "Popup a widget buffer for updating QUERY.
 
@@ -2778,6 +2791,7 @@ QUERY is a plist as query configuration."
   t         "Remove query configuration of '%s'?"
   'Japanese "クエリ'%s'の設定を削除してよろしいですか？")
 
+;;;###autoload
 (defun bts:query-remove (query)
   "Remove QUERY with confirm.
 
@@ -2803,6 +2817,7 @@ QUERY is a plist as query configuration."
   t         "Remove all query configuration?"
   'Japanese "全てのクエリの設定を削除してよろしいですか？")
 
+;;;###autoload
 (defun bts:query-remove-all ()
   "Remove all query configurations with confirm."
   (interactive)
@@ -3542,7 +3557,8 @@ Otherwise, ticket-single-view is used."
                (bts--error "over ticket fetch limit. remained %s" (mapconcat 'identity runkeys ", "))
                (funcall quit "wait limit is over"))
               (runkeys
-               (bts:show-message (bts:get-message 'bts-ticket-fetch-waiting (length runkeys))))
+               (when (not (active-minibuffer-window))
+                 (bts:show-message (bts:get-message 'bts-ticket-fetch-waiting (length runkeys)))))
               (t
                (funcall quit nil failkeys)))))
     (yaxception:catch 'error e
@@ -3576,8 +3592,9 @@ queries... %s"
 callback... %s"
                callback)
   (if bts::ticket-fetch-finish-check-timer
-      (progn (bts--info "quit ticket fetch : other ticket fetch task exists")
-             (bts:show-message (bts:get-message 'bts-ticket-fetch-already-running)))
+      (progn
+        (bts--info "quit ticket fetch : other ticket fetch task exists")
+        (bts:show-message (bts:get-message 'bts-ticket-fetch-already-running)))
     (bts::ticket-fetch-init-result)
     (dolist (q (if (bts:query-p queries)
                    (list queries)
@@ -3719,19 +3736,26 @@ TICKETS is a list of plist as fetched ticket from QUERY."
         if (buffer-local-value 'bts::summary-query-idlist buf)
         collect buf))
 
-(defun bts::summary-find-buffer (queries)
-  (bts--debug* "start summary find buffer. queries[%s]"
+(defun* bts::summary-find-buffer (queries &key not-exact)
+  (bts--debug* "start summary find buffer. queries[%s] not-exact[%s]"
                (mapconcat (lambda (q) (bts:query-get-unique-string q t))
                           queries
-                          ", "))
+                          ", ")
+               not-exact)
   (loop with query-idlist = (loop for q in queries
                                   collect (plist-get q :bts-id))
+        with exact-matcher = (lambda (idlist)
+                               (and (= (length idlist)
+                                       (length query-idlist))
+                                    (loop for id in idlist
+                                          always (member id query-idlist))))
+        with fuzzy-matcher = (lambda (idlist)
+                               (loop for id in query-idlist
+                                     always (member id idlist)))
+        with matcher = (if not-exact fuzzy-matcher exact-matcher)
         for buf in (buffer-list)
         for curr-query-idlist = (buffer-local-value 'bts::summary-query-idlist buf)
-        if (and (= (length curr-query-idlist)
-                   (length query-idlist))
-                (loop for id in curr-query-idlist
-                      always (member id query-idlist)))
+        if (funcall matcher curr-query-idlist)
         return (progn (bts--debug "found summary buffer : %s" (buffer-name buf))
                       buf)))
 
@@ -3967,7 +3991,7 @@ TICKETS is a list of plist as fetched ticket from QUERY."
       (bts:show-message "Failed summary add entry : %s" (yaxception:get-text e)))
     (yaxception:finally
       ;; Restore max-specpdl-size because it might happens to change that globally.
-      (when (not bts::max-specpdl-size-bkup)
+      (when bts::max-specpdl-size-bkup
         (setq max-specpdl-size bts::max-specpdl-size-bkup)))))
 
 (defvar bts::default-summary-buffer-name "*BTS: Summary*")
@@ -4038,6 +4062,7 @@ TICKETS is a list of plist as fetched ticket from QUERY."
     (define-key map (kbd "f")     'bts:summary-right-column)
     (define-key map (kbd "SPC")   'scroll-up)
     (define-key map (kbd "RET")   'bts:summary-view-ticket)
+    (define-key map (kbd "o")     'bts:summary-view-ticket)
     (define-key map (kbd "m")     'bts:summary-mark-ticket)
     (define-key map (kbd "M")     'bts:summary-mark-all-tickets)
     (define-key map (kbd "u")     'bts:summary-unmark-ticket)
@@ -4045,6 +4070,8 @@ TICKETS is a list of plist as fetched ticket from QUERY."
     (define-key map (kbd "M-DEL") 'bts:summary-unmark-all-tickets)
     (define-key map (kbd "t")     'bts:summary-toggle-ticket-marking)
     (define-key map (kbd "T")     'bts:summary-toggle-all-tickets-marking)
+    (define-key map (kbd "d")     'bts:summary-delete-ticket)
+    (define-key map (kbd "D")     'bts:summary-delete-marked-tickets)
     (define-key map (kbd "r")     'bts:summary-reload-ticket)
     (define-key map (kbd "g")     'bts:summary-reload-ticket)
     (define-key map (kbd "R")     'bts:summary-reload-all)
@@ -4221,6 +4248,39 @@ TICKETS is a list of plist as fetched ticket from QUERY."
                   (yaxception:get-text e) (yaxception:get-stack-trace-string e))
       (bts:show-message "Failed summary toggle ticket marking : %s" (yaxception:get-text e)))))
 
+(bts:regist-message 'bts-summary-ticket-no-eraser
+  t         "Not provide ticket eraser for %s"
+  'Japanese "%sのチケット削除機能は提供されていません")
+
+(bts:regist-message 'bts-summary-ticket-erase-confirm
+  t         "Really delete this ticket?"
+  'Japanese "このチケットを削除してよろしいですか？")
+
+(defun bts:summary-delete-ticket ()
+  "Delete current entry."
+  (interactive)
+  (yaxception:$
+    (yaxception:try
+      (bts--debug "start summary delete ticket.")
+      (let* ((ticket (bts::summary-get-ticket-at))
+             (proj (bts:ticket-get-project ticket))
+             (sys (bts:project-get-system proj))
+             (func (bts:system-ticket-eraser sys)))
+        (cond ((not (bts:ticket-p ticket))
+               (bts:show-message (bts:get-message 'bts-summary-ticket-not-found)))
+              ((not (functionp func))
+               (bts:show-message (bts:get-message 'bts-summary-ticket-no-eraser)))
+              ((y-or-n-p (bts:get-message 'bts-summary-ticket-erase-confirm))
+               (funcall func proj ticket)
+               (tabulated-list-delete-entry)
+               (bts:show-message "Done"))
+              (t
+               (bts:show-message "Quit")))))
+    (yaxception:catch 'error e
+      (bts--fatal "failed summary delete ticket : %s\n%s"
+                  (yaxception:get-text e) (yaxception:get-stack-trace-string e))
+      (bts:show-message "Failed summary delete ticket : %s" (yaxception:get-text e)))))
+
 (defun bts:summary-mark-all-tickets ()
   "Put marks to all entries."
   (interactive)
@@ -4268,6 +4328,48 @@ TICKETS is a list of plist as fetched ticket from QUERY."
       (bts--fatal "failed summary toggle all tickets marking : %s\n%s"
                   (yaxception:get-text e) (yaxception:get-stack-trace-string e))
       (bts:show-message "Failed summary toggle all tickets marking : %s" (yaxception:get-text e)))))
+
+(bts:regist-message 'bts-summary-ticket-all-erase-confirm
+  t         "Really delete all marked tickets?"
+  'Japanese "選択されたチケットを削除してよろしいですか？")
+
+(bts:regist-message 'bts-summary-ticket-no-erasers
+  t         "Not deleted %i tickets : they are not provided eraser"
+  'Japanese "%i件のチケットが削除機能が提供されていないため削除できませんでした")
+
+(defun bts:summary-delete-marked-tickets ()
+  "Delete marked entries."
+  (interactive)
+  (yaxception:$
+    (yaxception:try
+      (bts--debug "start summary delete marked tickets.")
+      (let ((tickets (-filter 'bts:ticket-p
+                              (loop for ov in (bts::summary-get-marking-in (point-min) (point-max))
+                                    collect (bts::summary-get-ticket-at (overlay-start ov))))))
+        (cond ((not tickets)
+               (bts:show-message (bts:get-message 'bts-summary-ticket-not-found)))
+              ((not (y-or-n-p (bts:get-message 'bts-summary-ticket-all-erase-confirm)))
+               (bts:show-message "Quit"))
+              (t
+               (save-excursion
+                 (loop with no-eraser = 0
+                       for ticket in tickets
+                       for proj = (bts:ticket-get-project ticket)
+                       for sys = (bts:project-get-system proj)
+                       for func = (bts:system-ticket-eraser sys)
+                       if (functionp func)
+                       do (progn (funcall func proj ticket)
+                                 (bts::summary-goto-line ticket)
+                                 (tabulated-list-delete-entry))
+                       else
+                       do (incf no-eraser)
+                       finally (when (> no-eraser 0)
+                                 (bts:show-message (bts:get-message 'bts-summary-ticket-no-erasers)))))
+               (bts:show-message "Done")))))
+    (yaxception:catch 'error e
+      (bts--fatal "failed summary marked tickets : %s\n%s"
+                  (yaxception:get-text e) (yaxception:get-stack-trace-string e))
+      (bts:show-message "Failed summary marked tickets : %s" (yaxception:get-text e)))))
 
 (defun bts:summary-open (queries)
   "Setup a summary buffer for QUERIES and switch current buffer to that."
