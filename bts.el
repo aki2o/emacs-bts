@@ -343,7 +343,7 @@
 (require 'dash)
 (require 's)
 (require 'pos-tip)
-(require 'pophint-config nil t)
+(require 'pophint nil t)
 
 (defgroup bts nil
   "A unified UI for various bug tracking systems."
